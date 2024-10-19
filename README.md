@@ -48,7 +48,7 @@ cd referalapi
 ```
 pip install -r requirements.txt
 ```
-4. Выполнить миграции:                                                               
+4. Выполнить миграции:                                                            
 Для Linux/macOS:
 ```
 python3 manage.py migrate
