@@ -57,7 +57,7 @@ python3 manage.py migrate
 ```
 python manage.py migrate
 ```
-5. Запустить проект:
+5. Запустить проект:          
 Для Linux/macOS:
 ```
 python3 manage.py runserver
