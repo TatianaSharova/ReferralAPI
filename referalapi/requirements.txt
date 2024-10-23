@@ -3,3 +3,4 @@ djoser
 python-dotenv
 drf-spectacular
 requests
+django-redis
