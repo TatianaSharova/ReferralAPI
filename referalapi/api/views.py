@@ -1,6 +1,7 @@
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from rest_framework import mixins, permissions, status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,15 +36,12 @@ class CodesViewSet(viewsets.ModelViewSet):
     serializer_class = CodeSerializer
     http_method_names = ['get', 'post', 'delete', 'patch']
     permission_classes = (IsAuthor,)
-    queryset = Codes.objects.all()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return Codes.objects.filter(user=self.request.user)
-        return Codes.objects.all()
+        return Codes.objects.filter(user=self.request.user)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -55,6 +53,16 @@ class CodesViewSet(viewsets.ModelViewSet):
             )
 
         return super().list(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        cache.delete(f'{instance.code}')
+        cache.delete(f'user_{instance.user.id}')
+
+        self.perform_destroy(instance)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ReferalViewSet(mixins.ListModelMixin,
@@ -95,17 +103,24 @@ class SendEmail(APIView):
     def get(self, request):
         user = request.user
         email = user.email
-        try:
-            ref_code = Codes.objects.get(user=user)
-        except Codes.DoesNotExist:
-            return Response(
-                {'detail': 'У вас нет своего реферального кода!'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+
+        ref_code = cache.get(f'user_{user.id}')
+
+        if not ref_code:
+            try:
+                ref_code = Codes.objects.get(user=user)
+                cache.set(f'user_{user.id}',
+                          ref_code.code)
+                ref_code = ref_code.code
+            except Codes.DoesNotExist:
+                return Response(
+                    {'detail': 'У вас нет своего реферального кода!'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
         send_mail(
             subject='Your referral code',
-            message=f'Ваш реферальный код: {ref_code.code}',
+            message=f'Ваш реферальный код: {ref_code}',
             from_email=EMAIL_HOST_USER,
             recipient_list=[email],
             fail_silently=False,
