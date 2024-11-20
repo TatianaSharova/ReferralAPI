@@ -1,6 +1,6 @@
 Django==3.2.16
-djoser
-python-dotenv
-drf-spectacular
-requests
-django-redis
+djoser==2.2.3
+python-dotenv==1.0.1
+drf-spectacular==0.27.2
+requests==2.32.3
+django-redis==5.4.0
